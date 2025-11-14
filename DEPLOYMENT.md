@@ -7,7 +7,7 @@ This guide covers deploying the Database Chat App to Azure Static Web Apps.
 - Azure account with an active subscription
 - Azure CLI installed (`az` command)
 - GitHub account (for automated deployments)
-- Anthropic API key
+- Google Gemini API key
 
 ## Deployment Methods
 
@@ -32,7 +32,7 @@ This guide covers deploying the Database Chat App to Azure Static Web Apps.
    - Navigate to your Static Web App
    - Go to Configuration > Application settings
    - Add the following:
-     - `ANTHROPIC_API_KEY`
+     - `GEMINI_API_KEY`
      - `DB_SERVER`
      - `DB_DATABASE`
      - `DB_USER`
@@ -69,7 +69,7 @@ This guide covers deploying the Database Chat App to Azure Static Web Apps.
      --name database-chat-app \
      --resource-group database-chat-rg \
      --setting-names \
-       ANTHROPIC_API_KEY="your-key" \
+       GEMINI_API_KEY="your-key" \
        DB_SERVER="your-server.database.windows.net" \
        DB_DATABASE="inventory" \
        DB_USER="your-user" \
@@ -100,7 +100,7 @@ This guide covers deploying the Database Chat App to Azure Static Web Apps.
 4. **Add secrets to GitHub repository:**
    - Go to Settings > Secrets and variables > Actions
    - Add repository secrets:
-     - `ANTHROPIC_API_KEY`
+     - `GEMINI_API_KEY`
      - `DB_SERVER`
      - `DB_DATABASE`
      - `DB_USER`
@@ -179,7 +179,7 @@ If you want to use your on-premises SQL Server:
 
 ### API Key Security
 
-- Store `ANTHROPIC_API_KEY` in Azure Key Vault (recommended for production)
+- Store `GEMINI_API_KEY` in Azure Key Vault (recommended for production)
 - Never commit keys to source control
 - Rotate keys regularly
 
@@ -208,7 +208,7 @@ The `staticwebapp.config.json` is already configured, but verify CORS settings f
 - **Azure Static Web Apps**: Free tier available (100 GB bandwidth/month)
 - **Azure SQL**: Use S0 tier for testing (~$15/month), scale as needed
 - **Azure Functions**: Included with Static Web Apps
-- **Anthropic API**: Pay per token used
+- **Google Gemini API**: Pay per token used (free tier available)
 
 ## Troubleshooting
 

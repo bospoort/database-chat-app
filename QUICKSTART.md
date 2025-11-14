@@ -6,7 +6,7 @@ Get the Database Chat App running locally in under 5 minutes!
 
 - [ ] Node.js 18+ installed
 - [ ] SQL Server running (local or Azure SQL)
-- [ ] Anthropic API key (get one at console.anthropic.com)
+- [ ] Google Gemini API key (get one at aistudio.google.com)
 - [ ] Git installed
 
 ## Step 1: Clone and Install (2 minutes)
@@ -36,7 +36,7 @@ code api/local.settings.json
 ```
 
 Update the following values:
-- `ANTHROPIC_API_KEY`: Your API key from console.anthropic.com
+- `GEMINI_API_KEY`: Your API key from aistudio.google.com
 - `DB_SERVER`: Your SQL Server address (e.g., `localhost` or `server.database.windows.net`)
 - `DB_DATABASE`: Your database name (e.g., `inventory`)
 - `DB_USER`: Your SQL username
@@ -91,8 +91,8 @@ npm run dev
 4. Test connection with: `sqlcmd -S <server> -U <user> -P <password> -d <database>`
 
 ### API key not working
-1. Verify you copied the entire key (starts with `sk-ant-api...`)
-2. Check console.anthropic.com for usage limits
+1. Verify you copied the entire key from Google AI Studio
+2. Check aistudio.google.com for usage limits
 3. Make sure key is in quotes in `local.settings.json`
 
 ### Functions not starting
@@ -194,6 +194,6 @@ database-chat-app/
 
 ## Success!
 
-You should now have a working database chat application! 
+You should now have a working database chat application!
 
-Try asking complex questions and see how Claude converts them to SQL and executes them safely.
+Try asking complex questions and see how Gemini converts them to SQL and executes them safely.
