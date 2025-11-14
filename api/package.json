@@ -1,0 +1,17 @@
+{
+  "name": "database-chat-api",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Azure Functions API for database chat",
+  "scripts": {
+    "start": "func start",
+    "build": "echo 'No build step required for JavaScript functions'"
+  },
+  "dependencies": {
+    "@azure/functions": "^4.5.0",
+    "mssql": "^10.0.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.5"
+  }
+}
