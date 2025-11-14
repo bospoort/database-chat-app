@@ -2,7 +2,7 @@
 
 ## What I Built For You
 
-A complete, production-ready web application that allows your customers to interact with your SQL Server database using natural language. The app uses Claude AI to convert questions into SQL queries and displays results in an intuitive chat interface.
+A complete, production-ready web application that allows your customers to interact with your SQL Server database using natural language. The app uses Google Gemini AI to convert questions into SQL queries and displays results in an intuitive chat interface.
 
 ## Key Features
 
@@ -22,7 +22,7 @@ Azure Static Web Apps
     ↓
 Azure Functions (Node.js)
     ↓
-Claude API (Anthropic)
+Gemini API (Google)
     ↓
 SQL Server Database
 ```
@@ -39,7 +39,7 @@ SQL Server Database
 ### Backend (`api/`)
 - **chat/index.js** - Main endpoint that:
   - Accepts natural language questions
-  - Calls Claude API to generate SQL
+  - Calls Gemini API to generate SQL
   - Validates queries for security
   - Executes queries safely
   - Returns formatted results
@@ -89,7 +89,7 @@ SQL Server Database
 2. **Configure environment:**
    ```bash
    cp api/local.settings.json.template api/local.settings.json
-   # Edit with your database credentials and Anthropic API key
+   # Edit with your database credentials and Gemini API key
    ```
 
 3. **Set up sample database:**
@@ -154,7 +154,7 @@ Full deployment instructions in `DEPLOYMENT.md`.
 
 - **Frontend**: React 18, TypeScript, Vite, Tailwind CSS
 - **Backend**: Azure Functions (Node.js), mssql package
-- **AI**: Claude Sonnet 4.5 via Anthropic API
+- **AI**: Gemini 2.5 Flash via Google AI API
 - **Database**: SQL Server (on-premises or Azure SQL)
 - **Hosting**: Azure Static Web Apps
 
@@ -194,7 +194,7 @@ database-chat-app/
 - **Azure Static Web Apps**: Free tier (100 GB bandwidth/month)
 - **Azure Functions**: Included with Static Web Apps
 - **Azure SQL Database**: ~$15/month (S0 tier for dev/test)
-- **Anthropic API**: Pay per token (~$0.01 per query)
+- **Google Gemini API**: Pay per token (free tier available)
 
 **Estimated monthly cost for light usage: $15-50**
 
@@ -215,7 +215,7 @@ database-chat-app/
 - Review documentation in README.md
 - Check QUICKSTART.md for common issues
 - Ensure SQL Server is accessible
-- Verify Anthropic API key is valid
+- Verify Gemini API key is valid
 - Check Azure Functions logs if deployed
 
 ## What Makes This Special

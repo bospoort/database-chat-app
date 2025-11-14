@@ -1,6 +1,6 @@
 # Database Chat App - Azure Static Web Apps
 
-A starter template for allowing customers to interact with your SQL database through natural language using Claude AI.
+A starter template for allowing customers to interact with your SQL database through natural language using Google Gemini AI.
 
 ## Architecture
 
@@ -10,8 +10,8 @@ Customer Browser (React)
 Azure Static Web Apps
     ↓
 Azure Functions API
-    ↓ (Claude API)
-Anthropic Claude
+    ↓ (Gemini API)
+Google Gemini
     ↓
 SQL Server Database
 ```
@@ -31,7 +31,7 @@ SQL Server Database
 - Azure CLI
 - Azure Static Web Apps CLI (`npm install -g @azure/static-web-apps-cli`)
 - SQL Server database (local or Azure SQL)
-- Anthropic API key
+- Google Gemini API key
 
 ## Project Structure
 
@@ -72,7 +72,7 @@ Create `api/local.settings.json`:
   "Values": {
     "AzureWebJobsStorage": "",
     "FUNCTIONS_WORKER_RUNTIME": "node",
-    "ANTHROPIC_API_KEY": "your-anthropic-api-key",
+    "GEMINI_API_KEY": "your-gemini-api-key",
     "DB_SERVER": "localhost",
     "DB_DATABASE": "inventory",
     "DB_USER": "SA",
@@ -125,7 +125,7 @@ az staticwebapp create \
 
 In Azure Portal, add these Application Settings to your Static Web App:
 
-- `ANTHROPIC_API_KEY`
+- `GEMINI_API_KEY`
 - `DB_SERVER`
 - `DB_DATABASE`
 - `DB_USER`
@@ -164,7 +164,7 @@ const ALLOWED_TABLES = ['Products', 'Inventory', 'Categories', 'YourTable'];
 
 ### Customizing the System Prompt
 
-Edit `api/chat/index.ts` and modify the `systemPrompt` variable to adjust Claude's behavior.
+Edit `api/chat/index.js` and modify the `systemPrompt` variable to adjust Gemini's behavior.
 
 ### Styling
 
@@ -185,9 +185,9 @@ Once deployed, customers can ask:
 - Check firewall rules (Azure SQL needs your IP whitelisted)
 - Verify connection string in `local.settings.json`
 
-### Claude API Issues
+### Gemini API Issues
 - Verify API key is correct
-- Check API usage limits at console.anthropic.com
+- Check API usage limits at aistudio.google.com
 - Review function logs for detailed error messages
 
 ### Deployment Issues
