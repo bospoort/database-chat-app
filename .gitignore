@@ -42,6 +42,7 @@ build
 .output
 .vercel
 .netlify
+.vite
 
 # Azure Static Web Apps
 .azure
