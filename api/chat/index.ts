@@ -1,8 +1,39 @@
-import sql from "mssql";
+import * as sql from "mssql";
 import { GoogleGenAI } from "@google/genai";
-import { dbConfig, ALLOWED_TABLES, DANGEROUS_KEYWORDS, AI_MODEL } from "../config.js";
+import {
+  HttpRequest,
+  HttpResponseInit,
+  InvocationContext,
+} from "@azure/functions";
+import {
+  dbConfig,
+  ALLOWED_TABLES,
+  DANGEROUS_KEYWORDS,
+  AI_MODEL,
+} from "../config.js";
 
-function validateQuery(query) {
+interface ColumnInfo {
+  name: string;
+  type: string;
+  nullable: boolean;
+}
+
+interface DatabaseSchema {
+  [tableName: string]: ColumnInfo[];
+}
+
+interface QueryResult {
+  success: boolean;
+  data?: any[];
+  rowCount?: number;
+  error?: string;
+}
+
+interface ChatRequestBody {
+  message?: string;
+}
+
+function validateQuery(query: string): boolean {
   const upperQuery = query.toUpperCase().trim();
 
   if (!upperQuery.startsWith("SELECT")) {
@@ -18,7 +49,7 @@ function validateQuery(query) {
   return true;
 }
 
-async function getDatabaseSchema() {
+async function getDatabaseSchema(): Promise<DatabaseSchema> {
   const pool = await sql.connect(dbConfig);
 
   const result = await pool.request().query(`
@@ -32,8 +63,8 @@ async function getDatabaseSchema() {
 
   await pool.close();
 
-  const schema = {};
-  result.recordset.forEach((row) => {
+  const schema: DatabaseSchema = {};
+  result.recordset.forEach((row: any) => {
     if (!schema[row.TABLE_NAME]) {
       schema[row.TABLE_NAME] = [];
     }
@@ -47,7 +78,7 @@ async function getDatabaseSchema() {
   return schema;
 }
 
-async function executeQuery(query) {
+async function executeQuery(query: string): Promise<QueryResult> {
   try {
     validateQuery(query);
     const pool = await sql.connect(dbConfig);
@@ -62,12 +93,15 @@ async function executeQuery(query) {
   } catch (error) {
     return {
       success: false,
-      error: error.message,
+      error: error instanceof Error ? error.message : String(error),
     };
   }
 }
 
-async function callGemini(userMessage, schema) {
+async function callGemini(
+  userMessage: string,
+  schema: DatabaseSchema
+): Promise<string> {
   // The client gets the API key from the environment variable `GEMINI_API_KEY`.
   const ai = new GoogleGenAI({});
 
@@ -88,49 +122,54 @@ Rules:
     },
   });
   console.log("Gemini response data:", response.text);
-  return response.text;
+  return response.text || "";
 }
 
-function extractSqlQuery(aiResponse) {
+function extractSqlQuery(aiResponse: string): string | null {
   const sqlMatch = aiResponse.match(/```sql\n([\s\S]*?)```/);
   return sqlMatch ? sqlMatch[1].trim() : null;
 }
 
-// ES module export
-export default async function (context, req) {
+// ES module export for Azure Functions v4
+export default async function (
+  req: HttpRequest,
+  context: InvocationContext
+): Promise<HttpResponseInit> {
   context.log("Chat function triggered");
 
   try {
-    const message = req.body?.message;
+    const body = (await req.json()) as ChatRequestBody;
+    const message = body?.message;
 
     if (!message) {
-      context.res = {
+      return {
         status: 400,
-        body: { error: "Message is required" },
+        jsonBody: { error: "Message is required" },
       };
-      return;
     }
 
     const schema = await getDatabaseSchema();
     const aiResponse = await callGemini(message, schema);
     const sqlQuery = extractSqlQuery(aiResponse);
 
-    let queryResult = null;
+    let queryResult: QueryResult | null = null;
     if (sqlQuery) {
       queryResult = await executeQuery(sqlQuery);
     }
 
     console.log("AI Response:", aiResponse, sqlQuery, queryResult);
-    context.res = {
+    return {
       status: 200,
       headers: { "Content-Type": "application/json" },
-      body: { aiResponse, sqlQuery, queryResult },
+      jsonBody: { aiResponse, sqlQuery, queryResult },
     };
   } catch (error) {
-    context.log.error("Error:", error);
-    context.res = {
+    context.error("Error:", error);
+    return {
       status: 500,
-      body: { error: error.message },
+      jsonBody: {
+        error: error instanceof Error ? error.message : String(error),
+      },
     };
   }
 }

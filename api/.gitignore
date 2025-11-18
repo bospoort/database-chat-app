@@ -1,0 +1,15 @@
+# Node modules
+node_modules/
+
+# Environment files
+.env
+local.settings.json
+
+# Azure Functions artifacts
+bin/
+obj/
+.azurefunctions/
+
+# TypeScript source maps (optional - keep if you want them for debugging)
+*.js.map
+*.d.ts.map

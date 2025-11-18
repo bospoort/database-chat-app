@@ -1,8 +1,10 @@
-export const dbConfig = {
-  server: process.env.DB_SERVER,
-  database: process.env.DB_DATABASE,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
+import { config as SqlConfig } from "mssql";
+
+export const dbConfig: SqlConfig = {
+  server: process.env.DB_SERVER as string,
+  database: process.env.DB_DATABASE as string,
+  user: process.env.DB_USER as string,
+  password: process.env.DB_PASSWORD as string,
   port: Number(process.env.DB_PORT),
   options: {
     encrypt: process.env.DB_ENCRYPT === "true",
@@ -11,7 +13,7 @@ export const dbConfig = {
   },
 };
 
-export const ALLOWED_TABLES = [
+export const ALLOWED_TABLES: readonly string[] = [
   "Buildings",
   "Categories",
   "Items",
@@ -21,9 +23,9 @@ export const ALLOWED_TABLES = [
   "TransactionTypes",
   "Units",
   "Users",
-];
+] as const;
 
-export const DANGEROUS_KEYWORDS = [
+export const DANGEROUS_KEYWORDS: readonly string[] = [
   "DROP",
   "DELETE",
   "INSERT",
@@ -35,6 +37,6 @@ export const DANGEROUS_KEYWORDS = [
   "EXECUTE",
   "GRANT",
   "REVOKE",
-];
+] as const;
 
-export const AI_MODEL = "gemini-2.5-flash";
+export const AI_MODEL = "gemini-2.5-flash" as const;

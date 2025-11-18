@@ -5,14 +5,19 @@
   "description": "Azure Functions API for database chat",
   "scripts": {
     "start": "func start",
-    "build": "echo 'No build step required for JavaScript functions'"
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "prestart": "npm run build"
   },
   "dependencies": {
     "@azure/functions": "^4.5.0",
+    "@google/genai": "*",
     "mssql": "^10.0.2"
   },
   "devDependencies": {
+    "@types/mssql": "^9.1.5",
     "@types/node": "^20.10.5",
-    "azure-functions-core-tools": "^4.0.5907"
+    "azure-functions-core-tools": "^4.0.5907",
+    "typescript": "^5.3.3"
   }
 }
