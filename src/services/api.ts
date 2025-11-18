@@ -26,21 +26,21 @@ class ApiService {
   constructor() {
     // In production, this will be the same origin
     // In development with Vite proxy, this routes to http://localhost:7071
-    this.baseUrl = '/api';
+    this.baseUrl = "/api";
   }
 
   async sendMessage(message: string): Promise<ChatResponse> {
-    const response = await fetch(`${this.baseUrl}/chat`, {
-      method: 'POST',
+    const response = await fetch(`${this.baseUrl}/query`, {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({ message }),
     });
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.error || 'Failed to send message');
+      throw new Error(error.error || "Failed to send message");
     }
 
     return response.json();
@@ -51,7 +51,7 @@ class ApiService {
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.error || 'Failed to get schema');
+      throw new Error(error.error || "Failed to get schema");
     }
 
     return response.json();
