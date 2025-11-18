@@ -1,0 +1,15 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "",
+    "FUNCTIONS_WORKER_RUNTIME": "node",
+    "GEMINI_API_KEY": "your-gemini-api-key-here",
+    "DB_SERVER": "localhost",
+    "DB_DATABASE": "inventory",
+    "DB_USER": "SA",
+    "DB_PASSWORD": "YourStrong@Passw0rd",
+    "DB_PORT": "1433",
+    "DB_ENCRYPT": "true",
+    "DB_TRUST_SERVER_CERTIFICATE": "true"
+  }
+}
