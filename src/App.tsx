@@ -1,17 +1,18 @@
-import { useState, useRef, useEffect } from 'react';
-import { ChatMessage, Message } from './components/ChatMessage';
-import { apiService } from './services/api';
-import './index.css';
+import { useState, useRef, useEffect } from "react";
+import { ChatMessage, Message } from "./components/ChatMessage";
+import { apiService } from "./services/api";
+import "./index.css";
 
 function App() {
   const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState('');
+  const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   useEffect(() => {
@@ -24,13 +25,13 @@ function App() {
 
     const userMessage: Message = {
       id: Date.now().toString(),
-      role: 'user',
+      role: "user",
       content: input,
       timestamp: new Date(),
     };
 
     setMessages((prev) => [...prev, userMessage]);
-    setInput('');
+    setInput("");
     setIsLoading(true);
     setError(null);
 
@@ -39,7 +40,7 @@ function App() {
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
-        role: 'assistant',
+        role: "assistant",
         content: response.aiResponse,
         aiResponse: response.aiResponse,
         sqlQuery: response.sqlQuery || undefined,
@@ -49,15 +50,17 @@ function App() {
 
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-      
+      setError(err instanceof Error ? err.message : "An error occurred");
+
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: `I encountered an error: ${err instanceof Error ? err.message : 'Unknown error'}. Please try again.`,
+        role: "assistant",
+        content: `I encountered an error: ${
+          err instanceof Error ? err.message : "Unknown error"
+        }. Please try again.`,
         timestamp: new Date(),
       };
-      
+
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
@@ -65,10 +68,14 @@ function App() {
   };
 
   const exampleQuestions = [
-    "What items do we have in stock?",
-    "Show me products with low inventory",
-    "What's the total value of inventory?",
-    "List all product categories"
+    "Show me all transactions from this week: show user, resident name, resident building, and number of items. Only show transaction with type checkout.",
+    "Show me total transactions from this week, this month, and this year.",
+    "Show me the most checked out item this week. Only show transaction type of checkout.",
+    "Show me top 5 list of volunteers listed by how many transactions of type checkout",
+    "Show me top 5 list of volunteers listed by how many transactions of type restock",
+    "Show me all units with multiple residents and show me the names of those residents on the same row",
+    "Show me the buildings listed by number of transactions for the building in descending order. The building needs to found through resident, unit, building relation; not the building code in the transaction.",
+    "Show me the top 20 residents listed by number of transactions for the resident in descending order.",
   ];
 
   const handleExampleClick = (question: string) => {
@@ -82,13 +89,44 @@ function App() {
         <div className="max-w-7xl mx-auto">
           <h1 className="text-2xl font-bold text-white">Database Assistant</h1>
           <p className="text-gray-400 text-sm mt-1">
-            Ask questions about your inventory in natural language
+            Ask questions about the PSC Inventory in natural language
           </p>
         </div>
       </header>
 
       {/* Main Chat Area */}
       <main className="flex-1 overflow-hidden flex flex-col max-w-7xl w-full mx-auto">
+        {/* Example Questions Dropdown */}
+        <div className="border-b border-gray-700 bg-gray-800">
+          <button
+            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+            className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-700 transition-colors"
+          >
+            <span className="text-white font-medium">Example Questions</span>
+            <span className="text-gray-400 text-xl">
+              {isDropdownOpen ? "▼" : "▶"}
+            </span>
+          </button>
+          {isDropdownOpen && (
+            <div className="px-4 pb-4 max-h-96 overflow-y-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {exampleQuestions.map((question, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => {
+                      handleExampleClick(question);
+                      setIsDropdownOpen(false);
+                    }}
+                    className="bg-gray-700 hover:bg-gray-600 text-white rounded-lg p-3 text-sm text-left transition-colors"
+                  >
+                    {question}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
         <div className="flex-1 overflow-y-auto p-4">
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center">
@@ -96,20 +134,10 @@ function App() {
                 <h2 className="text-xl font-semibold text-white mb-4">
                   Welcome! How can I help you today?
                 </h2>
-                <p className="text-gray-400 mb-6">
-                  Try asking questions about your database. Here are some examples:
+                <p className="text-gray-400">
+                  Try asking questions about your database using the example
+                  questions above or type your own question below.
                 </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {exampleQuestions.map((question, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => handleExampleClick(question)}
-                      className="bg-gray-700 hover:bg-gray-600 text-white rounded-lg p-3 text-sm text-left transition-colors"
-                    >
-                      {question}
-                    </button>
-                  ))}
-                </div>
               </div>
             </div>
           ) : (
@@ -125,9 +153,18 @@ function App() {
                         🤖
                       </div>
                       <div className="flex gap-1">
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                        <div
+                          className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                          style={{ animationDelay: "0ms" }}
+                        ></div>
+                        <div
+                          className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                          style={{ animationDelay: "150ms" }}
+                        ></div>
+                        <div
+                          className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                          style={{ animationDelay: "300ms" }}
+                        ></div>
                       </div>
                     </div>
                   </div>
@@ -167,7 +204,7 @@ function App() {
                 disabled={isLoading || !input.trim()}
                 className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isLoading ? 'Sending...' : 'Send'}
+                {isLoading ? "Sending..." : "Send"}
               </button>
             </div>
           </form>
