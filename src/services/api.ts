@@ -9,17 +9,6 @@ export interface ChatResponse {
   } | null;
 }
 
-export interface SchemaResponse {
-  schema: {
-    [tableName: string]: Array<{
-      name: string;
-      type: string;
-      nullable: boolean;
-    }>;
-  };
-  allowedTables: string[];
-}
-
 class ApiService {
   private baseUrl: string;
 
@@ -41,17 +30,6 @@ class ApiService {
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error || "Failed to send message");
-    }
-
-    return response.json();
-  }
-
-  async getSchema(): Promise<SchemaResponse> {
-    const response = await fetch(`${this.baseUrl}/schema`);
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || "Failed to get schema");
     }
 
     return response.json();
