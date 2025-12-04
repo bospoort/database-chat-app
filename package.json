@@ -4,10 +4,13 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "swa start http://localhost:5173 --api-location ./api",
+    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:api-watch\" \"npm run dev:swa\"",
     "dev:frontend": "vite",
     "dev:api": "cd api && func start",
+    "dev:api-watch": "cd api && npm run watch",
+    "dev:swa": "swa start http://localhost:5173 --api-location ./api",
     "build": "tsc && vite build",
+    "build:api": "cd api && npm run build",
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
   },
@@ -23,6 +26,7 @@
     "@typescript-eslint/parser": "^6.14.0",
     "@vitejs/plugin-react": "^4.2.1",
     "autoprefixer": "^10.4.16",
+    "concurrently": "^9.2.1",
     "eslint": "^8.55.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
