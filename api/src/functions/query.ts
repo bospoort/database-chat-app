@@ -35,6 +35,40 @@ interface ChatRequestBody {
   message?: string;
 }
 
+interface UserInfo {
+  userId: string;
+  userLogin: string;
+  userProvider: string;
+}
+
+function extractUserInfo(request: HttpRequest): UserInfo {
+  // Azure Static Web Apps injects user info in the x-ms-client-principal header
+  const principalHeader = request.headers.get("x-ms-client-principal");
+
+  if (principalHeader) {
+    try {
+      // The header is base64 encoded
+      const decoded = Buffer.from(principalHeader, "base64").toString("utf-8");
+      const principal = JSON.parse(decoded);
+
+      return {
+        userId: principal.userId || "unknown",
+        userLogin: principal.userDetails || principal.userId || "unknown",
+        userProvider: principal.identityProvider || "unknown",
+      };
+    } catch (error) {
+      console.error("Failed to parse user principal:", error);
+    }
+  }
+
+  // Fallback: no authentication or parsing failed
+  return {
+    userId: "anonymous",
+    userLogin: "anonymous",
+    userProvider: "none",
+  };
+}
+
 function isModifyingQuery(query: string): boolean {
   const upperQuery = query.toUpperCase().trim();
   return (
@@ -150,6 +184,10 @@ export async function query(
   // Initialize Application Insights
   initializeTelemetry();
 
+  // Extract user information
+  const userInfo = extractUserInfo(request);
+  context.log(`User: ${userInfo.userLogin} (${userInfo.userProvider})`);
+
   const startTime = Date.now();
 
   try {
@@ -201,6 +239,9 @@ export async function query(
       rowCount: queryResult?.rowCount,
       responseTimeMs: responseTime,
       wasModifyingQuery,
+      userId: userInfo.userId,
+      userLogin: userInfo.userLogin,
+      userProvider: userInfo.userProvider,
     });
 
     console.log("AI Response:", aiResponse, sqlQuery, queryResult);
@@ -221,6 +262,9 @@ export async function query(
       queryError: error instanceof Error ? error.message : String(error),
       responseTimeMs: responseTime,
       wasModifyingQuery: false,
+      userId: userInfo.userId,
+      userLogin: userInfo.userLogin,
+      userProvider: userInfo.userProvider,
     });
 
     context.error("Error:", error);

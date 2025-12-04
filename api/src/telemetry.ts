@@ -38,6 +38,9 @@ export interface QueryTelemetry {
   rowCount?: number;
   responseTimeMs: number;
   wasModifyingQuery: boolean;
+  userId?: string;
+  userLogin?: string;
+  userProvider?: string;
 }
 
 export function trackQuery(telemetry: QueryTelemetry) {
@@ -57,6 +60,9 @@ export function trackQuery(telemetry: QueryTelemetry) {
       querySuccess: telemetry.querySuccess,
       queryError: telemetry.queryError || "N/A",
       wasModifyingQuery: telemetry.wasModifyingQuery,
+      userId: telemetry.userId || "anonymous",
+      userLogin: telemetry.userLogin || "anonymous",
+      userProvider: telemetry.userProvider || "none",
     },
     measurements: {
       responseTimeMs: telemetry.responseTimeMs,

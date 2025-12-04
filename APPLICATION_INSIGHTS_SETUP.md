@@ -5,6 +5,7 @@ This guide explains how to set up and use Application Insights for observability
 ## What's Been Configured
 
 Application Insights has been integrated into your API to track:
+- **User identity** - Login name, user ID, and authentication provider
 - **User questions** - Every question asked to the database assistant
 - **AI responses** - The responses generated
 - **SQL queries** - All generated SQL queries (both executed and non-executed)
@@ -63,6 +64,20 @@ Add the connection string to `api/local.settings.json`:
    - **Value**: Your connection string from step 2
 5. Click **OK** → **Save**
 
+## User Authentication Tracking
+
+The application automatically extracts user information from Azure Static Web Apps authentication headers.
+
+**If authentication is enabled:**
+- User identity is captured from the `x-ms-client-principal` header
+- You'll see actual usernames and authentication providers in your logs
+
+**If authentication is NOT enabled:**
+- All users will be logged as "anonymous"
+- You can still track all queries, just without individual user attribution
+
+To enable authentication in Azure Static Web Apps, see: [Azure Static Web Apps Authentication](https://docs.microsoft.com/en-us/azure/static-web-apps/authentication-authorization)
+
 ## Viewing Your Telemetry Data
 
 ### Quick Start - View Recent Queries
@@ -76,6 +91,8 @@ customEvents
 | where name == "DatabaseQuery"
 | project
     timestamp,
+    user = tostring(customDimensions.userLogin),
+    provider = tostring(customDimensions.userProvider),
     userMessage = tostring(customDimensions.userMessage),
     sqlQuery = tostring(customDimensions.sqlQuery),
     success = tobool(customDimensions.querySuccess),
@@ -87,14 +104,36 @@ customEvents
 
 ### Common Queries
 
-#### See All User Questions
+#### See All User Questions with User Info
 ```kql
 customEvents
 | where name == "DatabaseQuery"
 | project
     timestamp,
+    user = tostring(customDimensions.userLogin),
     question = tostring(customDimensions.userMessage)
 | order by timestamp desc
+```
+
+#### Query Activity by User
+```kql
+customEvents
+| where name == "DatabaseQuery"
+| summarize
+    queryCount = count(),
+    avgResponseTime = avg(customMeasurements.responseTimeMs),
+    successRate = countif(tobool(customDimensions.querySuccess)) * 100.0 / count()
+    by user = tostring(customDimensions.userLogin)
+| order by queryCount desc
+```
+
+#### Most Active Users
+```kql
+customEvents
+| where name == "DatabaseQuery"
+| summarize count() by tostring(customDimensions.userLogin)
+| order by count_ desc
+| take 10
 ```
 
 #### Track Failed Queries
@@ -160,6 +199,9 @@ customEvents
 For each query, we track:
 
 **Properties:**
+- `userId` - Unique user identifier from Azure authentication
+- `userLogin` - User's login name/email (or "anonymous" if not authenticated)
+- `userProvider` - Authentication provider (e.g., "github", "aad", "twitter", or "none")
 - `userMessage` - The user's question
 - `aiResponse` - The AI's response
 - `sqlQuery` - Generated SQL query
