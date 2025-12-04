@@ -12,6 +12,7 @@ import {
   DANGEROUS_KEYWORDS,
   AI_MODEL,
 } from "../config";
+import { initializeTelemetry, trackQuery } from "../telemetry";
 
 interface ColumnInfo {
   name: string;
@@ -146,6 +147,11 @@ export async function query(
 ): Promise<HttpResponseInit> {
   context.log("Chat function triggered");
 
+  // Initialize Application Insights
+  initializeTelemetry();
+
+  const startTime = Date.now();
+
   try {
     const body = (await request.json()) as ChatRequestBody;
     const message = body?.message;
@@ -164,9 +170,12 @@ export async function query(
     console.log("Extracted SQL Query:", sqlQuery);
 
     let queryResult: QueryResult | null = null;
+    let wasModifyingQuery = false;
+
     if (sqlQuery) {
       // Check if this is a modifying query (UPDATE, INSERT, DELETE)
       if (isModifyingQuery(sqlQuery)) {
+        wasModifyingQuery = true;
         // Don't execute the query, just return it with a warning message
         aiResponse = `I'm sorry, Dave, I can't do that, but here is the query:\n\n\`\`\`sql\n${sqlQuery}\n\`\`\`\n\nThis query would modify the database, so it won't be executed automatically. If you need to run this query, please execute it manually through a secure database management interface.`;
         queryResult = {
@@ -180,6 +189,20 @@ export async function query(
       }
     }
 
+    const responseTime = Date.now() - startTime;
+
+    // Track telemetry
+    trackQuery({
+      userMessage: message,
+      aiResponse,
+      sqlQuery,
+      querySuccess: queryResult?.success ?? false,
+      queryError: queryResult?.error,
+      rowCount: queryResult?.rowCount,
+      responseTimeMs: responseTime,
+      wasModifyingQuery,
+    });
+
     console.log("AI Response:", aiResponse, sqlQuery, queryResult);
     return {
       status: 200,
@@ -187,6 +210,19 @@ export async function query(
       jsonBody: { aiResponse, sqlQuery, queryResult },
     };
   } catch (error) {
+    const responseTime = Date.now() - startTime;
+
+    // Track failed request
+    trackQuery({
+      userMessage: "Error occurred",
+      aiResponse: "",
+      sqlQuery: null,
+      querySuccess: false,
+      queryError: error instanceof Error ? error.message : String(error),
+      responseTimeMs: responseTime,
+      wasModifyingQuery: false,
+    });
+
     context.error("Error:", error);
     return {
       status: 500,
