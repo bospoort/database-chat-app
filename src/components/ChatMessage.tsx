@@ -1,5 +1,26 @@
 import React from "react";
 
+const renderMessageContent = (content: string) => {
+  // Simple markdown-like rendering for code blocks
+  const parts = content.split(/(```sql\n[\s\S]*?\n```)/g);
+
+  return parts.map((part, index) => {
+    if (part.startsWith('```sql\n') && part.endsWith('```')) {
+      // Extract SQL code
+      const code = part.slice(7, -3).trim();
+      return (
+        <div key={index} className="my-3 bg-gray-900 rounded p-3">
+          <div className="text-xs text-gray-400 mb-2">SQL Query:</div>
+          <code className="text-sm text-green-400 font-mono whitespace-pre-wrap">
+            {code}
+          </code>
+        </div>
+      );
+    }
+    return <span key={index}>{part}</span>;
+  });
+};
+
 export interface Message {
   aiResponse?: string;
   id: string;
@@ -41,15 +62,14 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
             <div className="text-sm text-gray-300 mb-1">
               {isUser ? "You" : "Assistant"}
             </div>
-            {/* Only show content if no SQL query */}
-            {!message.sqlQuery && (
-              <div className="text-white whitespace-pre-wrap">
-                {message.content}
-              </div>
-            )}
 
-            {/* SQL Query Display */}
-            {message.sqlQuery && (
+            {/* AI Response Content */}
+            <div className="text-white whitespace-pre-wrap">
+              {renderMessageContent(message.aiResponse || message.content)}
+            </div>
+
+            {/* SQL Query Display (only if not already shown in aiResponse) */}
+            {message.sqlQuery && !message.aiResponse?.includes('```sql') && (
               <div className="mt-3 bg-gray-900 rounded p-3">
                 <div className="text-xs text-gray-400 mb-2">SQL Query:</div>
                 <code className="text-sm text-green-400 font-mono">
@@ -122,9 +142,25 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
                       )}
                   </div>
                 ) : (
-                  <div className="bg-red-900/30 border border-red-700 rounded p-3">
-                    <div className="text-xs text-red-400 mb-1">Error:</div>
-                    <div className="text-sm text-red-300">
+                  <div className={`rounded p-3 ${
+                    message.queryResult.error?.includes('not executed') || message.queryResult.error?.includes('not automatically executed')
+                      ? 'bg-yellow-900/30 border border-yellow-700'
+                      : 'bg-red-900/30 border border-red-700'
+                  }`}>
+                    <div className={`text-xs mb-1 ${
+                      message.queryResult.error?.includes('not executed') || message.queryResult.error?.includes('not automatically executed')
+                        ? 'text-yellow-400'
+                        : 'text-red-400'
+                    }`}>
+                      {message.queryResult.error?.includes('not executed') || message.queryResult.error?.includes('not automatically executed')
+                        ? 'Note:'
+                        : 'Error:'}
+                    </div>
+                    <div className={`text-sm ${
+                      message.queryResult.error?.includes('not executed') || message.queryResult.error?.includes('not automatically executed')
+                        ? 'text-yellow-300'
+                        : 'text-red-300'
+                    }`}>
                       {message.queryResult.error}
                     </div>
                   </div>

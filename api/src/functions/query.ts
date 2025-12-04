@@ -1,4 +1,9 @@
-import { app, HttpRequest, HttpResponseInit, InvocationContext } from "@azure/functions";
+import {
+  app,
+  HttpRequest,
+  HttpResponseInit,
+  InvocationContext,
+} from "@azure/functions";
 import * as sql from "mssql";
 import { GoogleGenAI } from "@google/genai";
 import {
@@ -27,6 +32,15 @@ interface QueryResult {
 
 interface ChatRequestBody {
   message?: string;
+}
+
+function isModifyingQuery(query: string): boolean {
+  const upperQuery = query.toUpperCase().trim();
+  return (
+    upperQuery.startsWith("UPDATE") ||
+    upperQuery.startsWith("INSERT") ||
+    upperQuery.startsWith("DELETE")
+  );
 }
 
 function validateQuery(query: string): boolean {
@@ -105,7 +119,7 @@ async function callGemini(
 ${JSON.stringify(schema, null, 2)}
 
 Rules:
-1. Only SELECT queries
+1. Generate SELECT, UPDATE, INSERT, or DELETE queries as appropriate for the user's request
 2. Only these tables: ${ALLOWED_TABLES.join(", ")}
 3. Use SQL Server syntax (TOP instead of LIMIT, etc.)
 4. Wrap SQL in \`\`\`sql\`\`\` blocks`;
@@ -117,7 +131,7 @@ Rules:
       systemInstruction: systemPrompt,
     },
   });
-  console.log("Gemini response data:", response.text);
+  console.log("Gemini response datas:", response.text);
   return response.text || "";
 }
 
@@ -126,7 +140,10 @@ function extractSqlQuery(aiResponse: string): string | null {
   return sqlMatch ? sqlMatch[1].trim() : null;
 }
 
-export async function query(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
+export async function query(
+  request: HttpRequest,
+  context: InvocationContext
+): Promise<HttpResponseInit> {
   context.log("Chat function triggered");
 
   try {
@@ -141,12 +158,26 @@ export async function query(request: HttpRequest, context: InvocationContext): P
     }
 
     const schema = await getDatabaseSchema();
-    const aiResponse = await callGemini(message, schema);
+    let aiResponse = await callGemini(message, schema);
     const sqlQuery = extractSqlQuery(aiResponse);
+
+    console.log("Extracted SQL Query:", sqlQuery);
 
     let queryResult: QueryResult | null = null;
     if (sqlQuery) {
-      queryResult = await executeQuery(sqlQuery);
+      // Check if this is a modifying query (UPDATE, INSERT, DELETE)
+      if (isModifyingQuery(sqlQuery)) {
+        // Don't execute the query, just return it with a warning message
+        aiResponse = `I'm sorry, Dave, I can't do that, but here is the query:\n\n\`\`\`sql\n${sqlQuery}\n\`\`\`\n\nThis query would modify the database, so it won't be executed automatically. If you need to run this query, please execute it manually through a secure database management interface.`;
+        queryResult = {
+          success: false,
+          error:
+            "Query not executed: Modifying queries (UPDATE, INSERT, DELETE) are not automatically executed for safety reasons.",
+        };
+      } else {
+        // Execute SELECT queries normally
+        queryResult = await executeQuery(sqlQuery);
+      }
     }
 
     console.log("AI Response:", aiResponse, sqlQuery, queryResult);
@@ -166,8 +197,8 @@ export async function query(request: HttpRequest, context: InvocationContext): P
   }
 }
 
-app.http('query', {
-  methods: ['POST'],
-  authLevel: 'anonymous',
-  handler: query
+app.http("query", {
+  methods: ["POST"],
+  authLevel: "anonymous",
+  handler: query,
 });
