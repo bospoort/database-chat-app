@@ -1,6 +1,16 @@
 # Database Chat App - Azure Static Web Apps
 
-A starter template for allowing customers to interact with your SQL database through natural language using Google Gemini AI.
+A TypeScript-based starter template for allowing customers to interact with your SQL database through natural language using Google Gemini AI.
+
+## Tech Stack
+
+- **Frontend**: React 18 + TypeScript + Vite + Tailwind CSS
+- **Backend**: Azure Functions (TypeScript)
+- **AI**: Google Gemini API
+- **Database**: SQL Server / Azure SQL
+- **Hosting**: Azure Static Web Apps
+- **Monitoring**: Azure Application Insights
+- **CI/CD**: GitHub Actions
 
 ## Architecture
 
@@ -24,27 +34,37 @@ SQL Server Database
 - Formatted results display
 - Error handling and user feedback
 - Secure API key management
+- Application monitoring and telemetry with Application Insights
+- Automated CI/CD deployment via GitHub Actions
 
 ## Prerequisites
 
 - Node.js 18+ and npm
-- Azure CLI
-- Azure Static Web Apps CLI (`npm install -g @azure/static-web-apps-cli`)
+- TypeScript knowledge (project is fully TypeScript-based)
+- Azure CLI (for manual deployment)
+- Azure Static Web Apps CLI: `npm install -g @azure/static-web-apps-cli`
+- Azure Functions Core Tools: `npm install -g azure-functions-core-tools@4`
 - SQL Server database (local or Azure SQL)
-- Google Gemini API key
+- Google Gemini API key ([Get one here](https://aistudio.google.com/))
+- Azure Application Insights resource (for monitoring)
 
 ## Project Structure
 
 ```
 database-chat-app/
-├── src/                    # React frontend
-│   ├── components/         # React components
-│   ├── services/          # API service layer
+├── src/                    # React frontend (TypeScript)
+│   ├── components/         # React components (.tsx)
+│   ├── services/          # API service layer (.ts)
 │   └── App.tsx            # Main app component
-├── api/                   # Azure Functions
-│   ├── chat/             # Chat endpoint
-│   └── schema/           # Database schema endpoint
+├── api/                   # Azure Functions (TypeScript)
+│   ├── chat/             # Chat endpoint (index.ts)
+│   ├── schema/           # Database schema endpoint (index.ts)
+│   ├── dist/             # Compiled JavaScript output
+│   └── tsconfig.json     # TypeScript configuration
+├── .github/
+│   └── workflows/        # GitHub Actions CI/CD workflows
 ├── public/               # Static assets
+├── dist/                 # Built frontend output
 └── staticwebapp.config.json  # Azure SWA configuration
 ```
 
@@ -79,7 +99,8 @@ Create `api/local.settings.json`:
     "DB_PASSWORD": "YourStrong@Passw0rd",
     "DB_PORT": "1433",
     "DB_ENCRYPT": "true",
-    "DB_TRUST_SERVER_CERTIFICATE": "true"
+    "DB_TRUST_SERVER_CERTIFICATE": "true",
+    "APPINSIGHTS_INSTRUMENTATIONKEY": "your-appinsights-key"
   }
 }
 ```
@@ -87,20 +108,42 @@ Create `api/local.settings.json`:
 ### 3. Run Locally
 
 ```bash
-# Start the app (runs both frontend and API)
+# Start the app (runs frontend, API with watch mode, and SWA emulator)
 npm run dev
 
 # Or start them separately:
-# Terminal 1 - Frontend
+# Terminal 1 - Frontend (Vite dev server)
 npm run dev:frontend
 
-# Terminal 2 - API
-npm run dev:api
+# Terminal 2 - API (TypeScript watch mode + Functions)
+cd api && npm run watch
+
+# Terminal 3 - Azure Static Web Apps emulator
+npm run dev:swa
 ```
 
 The app will be available at `http://localhost:4280`
 
+**Note**: The `dev:api-watch` script automatically recompiles TypeScript files on changes for instant function updates.
+
 ### 4. Deploy to Azure
+
+#### Automated Deployment (Recommended)
+
+The project uses **GitHub Actions** for automated CI/CD. Simply push to the `main` branch:
+
+```bash
+git push origin main
+```
+
+The GitHub Actions workflow will automatically:
+- Build the TypeScript frontend and API
+- Deploy to Azure Static Web Apps
+- Run on every push to main and pull request
+
+#### Manual Deployment
+
+Alternatively, deploy manually using the Azure CLI:
 
 ```bash
 # Build the app
@@ -109,7 +152,7 @@ npm run build
 # Deploy using Azure Static Web Apps CLI
 swa deploy
 
-# Or deploy using Azure CLI
+# Or create a new Static Web App
 az staticwebapp create \
   --name database-chat-app \
   --resource-group your-resource-group \
@@ -125,14 +168,15 @@ az staticwebapp create \
 
 In Azure Portal, add these Application Settings to your Static Web App:
 
-- `GEMINI_API_KEY`
-- `DB_SERVER`
-- `DB_DATABASE`
-- `DB_USER`
-- `DB_PASSWORD`
-- `DB_PORT`
-- `DB_ENCRYPT`
-- `DB_TRUST_SERVER_CERTIFICATE`
+- `GEMINI_API_KEY` - Your Google Gemini API key
+- `DB_SERVER` - SQL Server hostname
+- `DB_DATABASE` - Database name
+- `DB_USER` - Database username
+- `DB_PASSWORD` - Database password
+- `DB_PORT` - Database port (default: 1433)
+- `DB_ENCRYPT` - Enable encryption (true/false)
+- `DB_TRUST_SERVER_CERTIFICATE` - Trust server certificate (true/false)
+- `APPINSIGHTS_INSTRUMENTATIONKEY` - Application Insights instrumentation key for telemetry
 
 ## Security Considerations
 
@@ -152,6 +196,23 @@ In Azure Portal, add these Application Settings to your Static Web App:
 - Restrict access to specific tables/views
 - Consider creating views for customer-accessible data
 
+## Monitoring and Telemetry
+
+The app integrates **Azure Application Insights** for comprehensive monitoring:
+
+### Tracked Events
+- User queries and chat interactions
+- SQL query execution and performance
+- API response times
+- Error tracking and debugging
+- Custom events for business intelligence
+
+### Viewing Telemetry
+1. Navigate to your Application Insights resource in Azure Portal
+2. View real-time metrics, failures, and performance data
+3. Use the Analytics workspace to query custom events
+4. Set up alerts for errors or performance thresholds
+
 ## Customization
 
 ### Adding More Allowed Tables
@@ -164,7 +225,7 @@ const ALLOWED_TABLES = ['Products', 'Inventory', 'Categories', 'YourTable'];
 
 ### Customizing the System Prompt
 
-Edit `api/chat/index.js` and modify the `systemPrompt` variable to adjust Gemini's behavior.
+Edit `api/chat/index.ts` and modify the `systemPrompt` variable to adjust Gemini's behavior.
 
 ### Styling
 
@@ -194,6 +255,13 @@ Once deployed, customers can ask:
 - Ensure all environment variables are set in Azure
 - Check Function App logs in Azure Portal
 - Verify staticwebapp.config.json routes are correct
+- Review GitHub Actions workflow runs for build/deployment errors
+
+### Application Insights Issues
+- Verify `APPINSIGHTS_INSTRUMENTATIONKEY` is set correctly
+- Check that telemetry appears in Azure Portal (may take a few minutes)
+- Review Application Insights connection logs
+- Ensure `applicationinsights` package is installed in api/package.json
 
 ## License
 
