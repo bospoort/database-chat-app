@@ -230,7 +230,7 @@ export async function query(
     const responseTime = Date.now() - startTime;
 
     // Track telemetry
-    trackQuery({
+    await trackQuery({
       userMessage: message,
       aiResponse,
       sqlQuery,
@@ -254,7 +254,7 @@ export async function query(
     const responseTime = Date.now() - startTime;
 
     // Track failed request
-    trackQuery({
+    await trackQuery({
       userMessage: "Error occurred",
       aiResponse: "",
       sqlQuery: null,

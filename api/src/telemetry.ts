@@ -43,7 +43,7 @@ export interface QueryTelemetry {
   userProvider?: string;
 }
 
-export function trackQuery(telemetry: QueryTelemetry) {
+export async function trackQuery(telemetry: QueryTelemetry) {
   const client = telemetryClient || initializeTelemetry();
 
   if (!client) {
@@ -86,6 +86,12 @@ export function trackQuery(telemetry: QueryTelemetry) {
       },
     });
   }
+
+  // Flush to ensure events are sent before function exits
+  client.flush();
+
+  // Wait a bit to ensure flush completes
+  await new Promise((resolve) => setTimeout(resolve, 500));
 }
 
 export function getTelemetryClient() {
