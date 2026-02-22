@@ -7,6 +7,16 @@ export interface ChatResponse {
     rowCount?: number;
     error?: string;
   } | null;
+  tokenUsage?: {
+    promptTokenCount: number;
+    totalTokenCount: number;
+    contextWindow: number;
+  };
+}
+
+export interface HistoryMessage {
+  role: "user" | "assistant";
+  content: string;
 }
 
 class ApiService {
@@ -18,13 +28,13 @@ class ApiService {
     this.baseUrl = "/api";
   }
 
-  async sendMessage(message: string): Promise<ChatResponse> {
+  async sendMessage(message: string, history: HistoryMessage[] = []): Promise<ChatResponse> {
     const response = await fetch(`${this.baseUrl}/query`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ message }),
+      body: JSON.stringify({ message, history }),
     });
 
     if (!response.ok) {
