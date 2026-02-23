@@ -1,4 +1,26 @@
-import React from "react";
+import React, { useState } from "react";
+
+const SqlBlock: React.FC<{ code: string }> = ({ code }) => {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="my-3 bg-gray-900 rounded">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-1.5 px-3 py-2 text-xs text-gray-400 hover:text-gray-200 transition-colors w-full text-left"
+      >
+        <span>{open ? "▼" : "▶"}</span>
+        <span>SQL Query</span>
+      </button>
+      {open && (
+        <div className="px-3 pb-3">
+          <code className="text-sm text-green-400 font-mono whitespace-pre-wrap">
+            {code}
+          </code>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const renderMessageContent = (content: string) => {
   // Simple markdown-like rendering for code blocks
@@ -6,16 +28,8 @@ const renderMessageContent = (content: string) => {
 
   return parts.map((part, index) => {
     if (part.startsWith('```sql\n') && part.endsWith('```')) {
-      // Extract SQL code
       const code = part.slice(7, -3).trim();
-      return (
-        <div key={index} className="my-3 bg-gray-900 rounded p-3">
-          <div className="text-xs text-gray-400 mb-2">SQL Query:</div>
-          <code className="text-sm text-green-400 font-mono whitespace-pre-wrap">
-            {code}
-          </code>
-        </div>
-      );
+      return <SqlBlock key={index} code={code} />;
     }
     return <span key={index}>{part}</span>;
   });
@@ -40,8 +54,31 @@ interface ChatMessageProps {
   message: Message;
 }
 
+const downloadCsv = (data: any[], filename = "results.csv") => {
+  const headers = Object.keys(data[0]);
+  const rows = data.map((row) =>
+    headers.map((h) => {
+      const val = row[h];
+      if (val === null || val === undefined) return "";
+      const str = String(val);
+      return str.includes(",") || str.includes('"') || str.includes("\n")
+        ? `"${str.replace(/"/g, '""')}"`
+        : str;
+    }).join(",")
+  );
+  const csv = [headers.join(","), ...rows].join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
 export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
   const isUser = message.role === "user";
+  const [sqlOpen, setSqlOpen] = useState(false);
 
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"} mb-4`}>
@@ -70,11 +107,21 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
 
             {/* SQL Query Display (only if not already shown in aiResponse) */}
             {message.sqlQuery && !message.aiResponse?.includes('```sql') && (
-              <div className="mt-3 bg-gray-900 rounded p-3">
-                <div className="text-xs text-gray-400 mb-2">SQL Query:</div>
-                <code className="text-sm text-green-400 font-mono">
-                  {message.sqlQuery}
-                </code>
+              <div className="mt-3 bg-gray-900 rounded">
+                <button
+                  onClick={() => setSqlOpen((o) => !o)}
+                  className="flex items-center gap-1.5 px-3 py-2 text-xs text-gray-400 hover:text-gray-200 transition-colors w-full text-left"
+                >
+                  <span>{sqlOpen ? "▼" : "▶"}</span>
+                  <span>SQL Query</span>
+                </button>
+                {sqlOpen && (
+                  <div className="px-3 pb-3">
+                    <code className="text-sm text-green-400 font-mono whitespace-pre-wrap">
+                      {message.sqlQuery}
+                    </code>
+                  </div>
+                )}
               </div>
             )}
 
@@ -83,8 +130,19 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
               <div className="mt-3">
                 {message.queryResult.success ? (
                   <div className="bg-gray-900 rounded p-3">
-                    <div className="text-xs text-gray-400 mb-2">
-                      Results: {message.queryResult.rowCount} rows
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="text-xs text-gray-400">
+                        Results: {message.queryResult.rowCount} rows
+                      </div>
+                      {message.queryResult.data && message.queryResult.data.length > 0 && (
+                        <button
+                          onClick={() => downloadCsv(message.queryResult!.data!)}
+                          className="text-xs text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1"
+                          title="Download full results as CSV"
+                        >
+                          ↓ Download CSV
+                        </button>
+                      )}
                     </div>
                     {message.queryResult.data &&
                       message.queryResult.data.length > 0 && (

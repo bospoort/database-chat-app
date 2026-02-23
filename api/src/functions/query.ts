@@ -31,8 +31,14 @@ interface QueryResult {
   error?: string;
 }
 
+interface HistoryMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
 interface ChatRequestBody {
   message?: string;
+  history?: HistoryMessage[];
 }
 
 interface UserInfo {
@@ -143,10 +149,28 @@ async function executeQuery(query: string): Promise<QueryResult> {
   }
 }
 
+interface GeminiResult {
+  text: string;
+  promptTokenCount: number;
+  totalTokenCount: number;
+  contextWindow: number;
+}
+
+let cachedContextWindow: number | null = null;
+
+async function getContextWindow(ai: GoogleGenAI): Promise<number> {
+  if (cachedContextWindow !== null) return cachedContextWindow;
+  const modelInfo = await ai.models.get({ model: AI_MODEL });
+  cachedContextWindow = modelInfo.inputTokenLimit ?? 1_048_576;
+  console.log(`Context window for ${AI_MODEL}: ${cachedContextWindow.toLocaleString()} tokens`);
+  return cachedContextWindow;
+}
+
 async function callGemini(
   userMessage: string,
-  schema: DatabaseSchema
-): Promise<string> {
+  schema: DatabaseSchema,
+  history: HistoryMessage[]
+): Promise<GeminiResult> {
   // The client gets the API key from the environment variable `GEMINI_API_KEY`.
   const ai = new GoogleGenAI({});
 
@@ -159,15 +183,28 @@ Rules:
 3. Use SQL Server syntax (TOP instead of LIMIT, etc.)
 4. Wrap SQL in \`\`\`sql\`\`\` blocks`;
 
-  const response = await ai.models.generateContent({
-    model: AI_MODEL,
-    contents: userMessage,
-    config: {
-      systemInstruction: systemPrompt,
-    },
-  });
-  console.log("Gemini response datas:", response.text);
-  return response.text || "";
+  const contents = [
+    ...history.map((msg) => ({
+      role: msg.role === "assistant" ? "model" : "user",
+      parts: [{ text: msg.content }],
+    })),
+    { role: "user", parts: [{ text: userMessage }] },
+  ];
+
+  const [response, contextWindow] = await Promise.all([
+    ai.models.generateContent({
+      model: AI_MODEL,
+      contents,
+      config: { systemInstruction: systemPrompt },
+    }),
+    getContextWindow(ai),
+  ]);
+
+  const promptTokenCount = response.usageMetadata?.promptTokenCount ?? 0;
+  const totalTokenCount = response.usageMetadata?.totalTokenCount ?? 0;
+  console.log(`Gemini tokens: ${promptTokenCount} prompt / ${totalTokenCount} total (${((promptTokenCount / contextWindow) * 100).toFixed(1)}% of context)`);
+
+  return { text: response.text || "", promptTokenCount, totalTokenCount, contextWindow };
 }
 
 function extractSqlQuery(aiResponse: string): string | null {
@@ -193,6 +230,7 @@ export async function query(
   try {
     const body = (await request.json()) as ChatRequestBody;
     const message = body?.message;
+    const history = body?.history ?? [];
 
     if (!message) {
       return {
@@ -202,7 +240,9 @@ export async function query(
     }
 
     const schema = await getDatabaseSchema();
-    let aiResponse = await callGemini(message, schema);
+    const geminiResult = await callGemini(message, schema, history);
+    let aiResponse = geminiResult.text;
+    const tokenUsage = { promptTokenCount: geminiResult.promptTokenCount, totalTokenCount: geminiResult.totalTokenCount, contextWindow: geminiResult.contextWindow };
     const sqlQuery = extractSqlQuery(aiResponse);
 
     console.log("Extracted SQL Query:", sqlQuery);
@@ -248,7 +288,7 @@ export async function query(
     return {
       status: 200,
       headers: { "Content-Type": "application/json" },
-      jsonBody: { aiResponse, sqlQuery, queryResult },
+      jsonBody: { aiResponse, sqlQuery, queryResult, tokenUsage },
     };
   } catch (error) {
     const responseTime = Date.now() - startTime;
