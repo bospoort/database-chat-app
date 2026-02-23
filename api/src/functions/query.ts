@@ -131,7 +131,7 @@ async function getDatabaseSchema(): Promise<DatabaseSchema> {
 
 async function executeQuery(query: string): Promise<QueryResult> {
   try {
-    // Skip validation for performance
+    validateQuery(query);
     const pool = await sql.connect(dbConfig);
     const result = await pool.request().query(query);
     await pool.close();
@@ -162,18 +162,19 @@ async function getContextWindow(ai: GoogleGenAI): Promise<number> {
   if (cachedContextWindow !== null) return cachedContextWindow;
   const modelInfo = await ai.models.get({ model: AI_MODEL });
   cachedContextWindow = modelInfo.inputTokenLimit ?? 1_048_576;
-  console.log(`Context window for ${AI_MODEL}: ${cachedContextWindow.toLocaleString()} tokens`);
+  console.log(
+    `Context window for ${AI_MODEL}: ${cachedContextWindow.toLocaleString()} tokens`,
+  );
   return cachedContextWindow;
 }
 
 async function callGemini(
   userMessage: string,
   schema: DatabaseSchema,
-  history: HistoryMessage[]
+  history: HistoryMessage[],
 ): Promise<GeminiResult> {
   // The client gets the API key from the environment variable `GEMINI_API_KEY`.
-  const apiKey = process.env.GEMINI_API_KEY || "AIzaSyD4xV9mK2pL8nQ3rT6wY1uE5oI7aB0cF9";
-  const ai = new GoogleGenAI({ apiKey });
+  const ai = new GoogleGenAI({});
 
   const systemPrompt = `You are a database assistant for Microsoft SQL Server. Generate T-SQL queries. Whenever you encounter a foreign key, resolve to the referenced table. Here is the schema:
 ${JSON.stringify(schema, null, 2)}
@@ -203,9 +204,16 @@ Rules:
 
   const promptTokenCount = response.usageMetadata?.promptTokenCount ?? 0;
   const totalTokenCount = response.usageMetadata?.totalTokenCount ?? 0;
-  console.log(`Gemini tokens: ${promptTokenCount} prompt / ${totalTokenCount} total (${((promptTokenCount / contextWindow) * 100).toFixed(1)}% of context)`);
+  console.log(
+    `Gemini tokens: ${promptTokenCount} prompt / ${totalTokenCount} total (${((promptTokenCount / contextWindow) * 100).toFixed(1)}% of context)`,
+  );
 
-  return { text: response.text || "", promptTokenCount, totalTokenCount, contextWindow };
+  return {
+    text: response.text || "",
+    promptTokenCount,
+    totalTokenCount,
+    contextWindow,
+  };
 }
 
 function extractSqlQuery(aiResponse: string): string | null {
@@ -215,7 +223,7 @@ function extractSqlQuery(aiResponse: string): string | null {
 
 export async function query(
   request: HttpRequest,
-  context: InvocationContext
+  context: InvocationContext,
 ): Promise<HttpResponseInit> {
   context.log("Chat function triggered");
 
@@ -243,7 +251,11 @@ export async function query(
     const schema = await getDatabaseSchema();
     const geminiResult = await callGemini(message, schema, history);
     let aiResponse = geminiResult.text;
-    const tokenUsage = { promptTokenCount: geminiResult.promptTokenCount, totalTokenCount: geminiResult.totalTokenCount, contextWindow: geminiResult.contextWindow };
+    const tokenUsage = {
+      promptTokenCount: geminiResult.promptTokenCount,
+      totalTokenCount: geminiResult.totalTokenCount,
+      contextWindow: geminiResult.contextWindow,
+    };
     const sqlQuery = extractSqlQuery(aiResponse);
 
     console.log("Extracted SQL Query:", sqlQuery);
