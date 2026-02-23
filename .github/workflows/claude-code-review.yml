@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: read
+      pull-requests: write
       issues: read
       id-token: write
 
@@ -40,18 +40,41 @@ jobs:
             REPO: ${{ github.repository }}
             PR NUMBER: ${{ github.event.pull_request.number }}
 
-            Please review this pull request and provide feedback on:
-            - Code quality and best practices
-            - Potential bugs or issues
-            - Performance considerations
-            - Security concerns
-            - Test coverage
+            Please review this pull request and post a GitHub review with inline comments where applicable.
 
-            Use the repository's CLAUDE.md for guidance on style and conventions. Be constructive and helpful in your feedback.
+            Follow these steps:
+            1. Get the PR details and head commit SHA:
+               `gh pr view $PR_NUMBER --json headRefOid,title,body`
+            2. Get the diff:
+               `gh pr diff $PR_NUMBER`
+            3. Analyze the changes for:
+               - Bugs or logic errors
+               - Security vulnerabilities
+               - Performance issues
+               - Code quality and best practices
+               - Test coverage
+               Use the repository's CLAUDE.md for style and conventions guidance.
+            4. Post a single GitHub review with inline comments using the API:
+               ```
+               gh api repos/$REPO/pulls/$PR_NUMBER/reviews \
+                 --method POST \
+                 --field commit_id="<HEAD_SHA>" \
+                 --field body="<overall summary>" \
+                 --field event="<APPROVE|REQUEST_CHANGES|COMMENT>" \
+                 --field "comments[][path]"="<file>" \
+                 --field "comments[][line]"=<line_number> \
+                 --field "comments[][body]"="<comment>"
+               ```
+               Add one `--field "comments[][path]"`, `--field "comments[][line]"`, and `--field "comments[][body]"` triplet per inline comment.
+               Only comment on lines that are part of the diff (changed lines). Use the right-hand side line number.
 
-            Use `gh pr comment` with your Bash tool to leave your review as a comment on the PR.
+            Review event rules:
+            - APPROVE: no critical issues found
+            - REQUEST_CHANGES: bugs, security vulnerabilities, or breaking changes present
+            - COMMENT: uncertain, needs discussion
+            Minor style or performance notes should be inline comments but must not block approval (use APPROVE).
 
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           # or https://docs.claude.com/en/docs/claude-code/cli-reference for available options
-          claude_args: '--allowed-tools "Bash(gh issue view:*),Bash(gh search:*),Bash(gh issue list:*),Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr list:*)"'
+          claude_args: '--allowed-tools "Bash(gh issue view:*),Bash(gh search:*),Bash(gh issue list:*),Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr list:*),Bash(gh pr review:*),Bash(gh api:*)"'
 
