@@ -1,9 +1,40 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { ChatMessage, Message } from "./components/ChatMessage";
 import { apiService } from "./services/api";
 import "./index.css";
+import { UserContext, ClientPrincipal } from "./contexts/UserContext";
+import usePersistentState from "./hooks/usePersistentState";
+import { useInactivityTimer } from "./hooks/useInactivityTimer";
 
 function App() {
+  const INACTIVITY_TIMEOUT = 15 * 60 * 1000; // 15 minutes
+
+  const [user, setUser] = usePersistentState<ClientPrincipal | null>('user', null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/.auth/me')
+      .then(res => res.json())
+      .then(payload => {
+        const { clientPrincipal } = payload;
+        if (clientPrincipal) setUser(clientPrincipal);
+      })
+      .catch(err => console.error('Error fetching auth info:', err))
+      .finally(() => setIsAuthLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleLogout = useCallback(() => {
+    localStorage.clear();
+    window.location.href = '/.auth/logout?post_logout_redirect_uri=/';
+  }, []);
+
+  useInactivityTimer({ onInactivity: handleLogout, timeout: INACTIVITY_TIMEOUT });
+
+  const userContextValue = useMemo(() => ({
+    user, setUser, isLoading: isAuthLoading,
+  }), [user, setUser, isAuthLoading]);
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -125,6 +156,7 @@ function App() {
   };
 
   return (
+    <UserContext.Provider value={userContextValue}>
     <div className="min-h-screen flex flex-col">
       {/* Sidebar overlay */}
       {isSidebarOpen && (
@@ -240,6 +272,19 @@ function App() {
                 </div>
               );
             })()}
+            {user && (
+              <div className="flex items-center gap-3 ml-4">
+                <span className="text-sm text-gray-300 hidden sm:block">
+                  {user.userDetails}
+                </span>
+                <button
+                  onClick={handleLogout}
+                  className="bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white px-3 py-1.5 rounded-lg text-sm transition-colors"
+                >
+                  Log out
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </header>
@@ -330,6 +375,7 @@ function App() {
         </div>
       </main>
     </div>
+    </UserContext.Provider>
   );
 }
 
