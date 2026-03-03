@@ -1,14 +1,15 @@
 import { useState, useRef, useEffect } from "react";
 import { ChatMessage, Message } from "./components/ChatMessage";
 import { apiService } from "./services/api";
+import samplePromptsRaw from "./samplePrompts.json";
+import "./index.css";
+
 interface PromptGroup {
   label: string;
   questions: string[];
 }
 
-import samplePromptsRaw from "./samplePrompts.json";
 const samplePrompts: PromptGroup[] = samplePromptsRaw;
-import "./index.css";
 
 function App() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -17,7 +18,11 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [openFolders, setOpenFolders] = useState<Set<string>>(new Set());
-  const [tokenUsage, setTokenUsage] = useState<{ promptTokenCount: number; totalTokenCount: number; contextWindow: number } | null>(null);
+  const [tokenUsage, setTokenUsage] = useState<{
+    promptTokenCount: number;
+    totalTokenCount: number;
+    contextWindow: number;
+  } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -185,31 +190,48 @@ function App() {
           </button>
           <div className="flex-1 flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-white">PSC Inventory Assistant</h1>
+              <h1 className="text-2xl font-bold text-white">
+                PSC Inventory Assistant
+              </h1>
               <p className="text-gray-400 text-sm mt-0.5">
                 Ask questions about the PSC Inventory in natural language
               </p>
             </div>
-            {tokenUsage && (() => {
-              const pct = tokenUsage.promptTokenCount / tokenUsage.contextWindow;
-              const barColor = pct < 0.5 ? "bg-green-500" : pct < 0.8 ? "bg-yellow-500" : "bg-red-500";
-              const textColor = pct < 0.5 ? "text-green-400" : pct < 0.8 ? "text-yellow-400" : "text-red-400";
-              const used = tokenUsage.promptTokenCount.toLocaleString();
-              const total = (tokenUsage.contextWindow / 1000).toFixed(0) + "K";
-              return (
-                <div className="flex flex-col items-end gap-1 min-w-36">
-                  <span className={`text-xs font-mono ${textColor}`}>
-                    {used} / {total} tokens
-                  </span>
-                  <div className="w-full h-1.5 bg-gray-600 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-all duration-500 ${barColor}`}
-                      style={{ width: `${Math.min(pct * 100, 100).toFixed(1)}%` }}
-                    />
+            {tokenUsage &&
+              (() => {
+                const pct =
+                  tokenUsage.promptTokenCount / tokenUsage.contextWindow;
+                const barColor =
+                  pct < 0.5
+                    ? "bg-green-500"
+                    : pct < 0.8
+                      ? "bg-yellow-500"
+                      : "bg-red-500";
+                const textColor =
+                  pct < 0.5
+                    ? "text-green-400"
+                    : pct < 0.8
+                      ? "text-yellow-400"
+                      : "text-red-400";
+                const used = tokenUsage.promptTokenCount.toLocaleString();
+                const total =
+                  (tokenUsage.contextWindow / 1000).toFixed(0) + "K";
+                return (
+                  <div className="flex flex-col items-end gap-1 min-w-36">
+                    <span className={`text-xs font-mono ${textColor}`}>
+                      {used} / {total} tokens
+                    </span>
+                    <div className="w-full h-1.5 bg-gray-600 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${barColor}`}
+                        style={{
+                          width: `${Math.min(pct * 100, 100).toFixed(1)}%`,
+                        }}
+                      />
+                    </div>
                   </div>
-                </div>
-              );
-            })()}
+                );
+              })()}
           </div>
         </div>
       </header>
