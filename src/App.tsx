@@ -1,7 +1,13 @@
 import { useState, useRef, useEffect } from "react";
 import { ChatMessage, Message } from "./components/ChatMessage";
 import { apiService } from "./services/api";
-import samplePrompts from "./samplePrompts.json";
+interface PromptGroup {
+  label: string;
+  questions: string[];
+}
+
+import samplePromptsRaw from "./samplePrompts.json";
+const samplePrompts: PromptGroup[] = samplePromptsRaw;
 import "./index.css";
 
 function App() {
