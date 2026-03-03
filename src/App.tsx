@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { ChatMessage, Message } from "./components/ChatMessage";
 import { apiService } from "./services/api";
+import samplePrompts from "./samplePrompts.json";
 import "./index.css";
 
 function App() {
@@ -74,43 +75,6 @@ function App() {
     }
   };
 
-  const exampleGroups: { label: string; questions: string[] }[] = [
-    {
-      label: "Transactions",
-      questions: [
-        "Show me all transactions from this week: show user, resident name, resident building, and number of items. Only show transactions with type checkout.",
-        "Show me total transactions from this week, this month, and this year.",
-      ],
-    },
-    {
-      label: "Items",
-      questions: [
-        "Show me the most checked-out item this week. Only include transactions of type checkout.",
-      ],
-    },
-    {
-      label: "Residents",
-      questions: [
-        "Show me all units with multiple residents and display the names of those residents on the same row.",
-        "Show me the top 20 residents by number of transactions, in descending order.",
-      ],
-    },
-    {
-      label: "Buildings",
-      questions: [
-        "Show me the buildings listed by number of transactions in descending order. The building needs to be found through the resident, unit, building relationship; not the building code in the transaction.",
-        "What is the most recent checkout transaction for any resident in a building with building code PST? Show the transaction date, resident name, unit, and volunteer.",
-      ],
-    },
-    {
-      label: "Volunteers",
-      questions: [
-        "Show me a top 5 list of volunteers by number of checkout transactions.",
-        "Show me a top 5 list of volunteers by number of restock transactions.",
-      ],
-    },
-  ];
-
   const toggleFolder = (label: string) => {
     setOpenFolders((prev) => {
       const next = new Set(prev);
@@ -171,7 +135,7 @@ function App() {
             Example Questions
           </p>
           <div className="flex flex-col gap-1">
-            {exampleGroups.map((group) => (
+            {samplePrompts.map((group) => (
               <div key={group.label}>
                 <button
                   onClick={() => toggleFolder(group.label)}
