@@ -1,7 +1,15 @@
 import { useState, useRef, useEffect } from "react";
 import { ChatMessage, Message } from "./components/ChatMessage";
 import { apiService } from "./services/api";
+import samplePromptsRaw from "./samplePrompts.json";
 import "./index.css";
+
+interface PromptGroup {
+  label: string;
+  questions: string[];
+}
+
+const samplePrompts: PromptGroup[] = samplePromptsRaw;
 
 function App() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -10,7 +18,11 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [openFolders, setOpenFolders] = useState<Set<string>>(new Set());
-  const [tokenUsage, setTokenUsage] = useState<{ promptTokenCount: number; totalTokenCount: number; contextWindow: number } | null>(null);
+  const [tokenUsage, setTokenUsage] = useState<{
+    promptTokenCount: number;
+    totalTokenCount: number;
+    contextWindow: number;
+  } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -74,43 +86,6 @@ function App() {
     }
   };
 
-  const exampleGroups: { label: string; questions: string[] }[] = [
-    {
-      label: "Transactions",
-      questions: [
-        "Show me all transactions from this week: show user, resident name, resident building, and number of items. Only show transactions with type checkout.",
-        "Show me total transactions from this week, this month, and this year.",
-      ],
-    },
-    {
-      label: "Items",
-      questions: [
-        "Show me the most checked-out item this week. Only include transactions of type checkout.",
-      ],
-    },
-    {
-      label: "Residents",
-      questions: [
-        "Show me all units with multiple residents and display the names of those residents on the same row.",
-        "Show me the top 20 residents by number of transactions, in descending order.",
-      ],
-    },
-    {
-      label: "Buildings",
-      questions: [
-        "Show me the buildings listed by number of transactions in descending order. The building needs to be found through the resident, unit, building relationship; not the building code in the transaction.",
-        "What is the most recent checkout transaction for any resident in a building with building code PST? Show the transaction date, resident name, unit, and volunteer.",
-      ],
-    },
-    {
-      label: "Volunteers",
-      questions: [
-        "Show me a top 5 list of volunteers by number of checkout transactions.",
-        "Show me a top 5 list of volunteers by number of restock transactions.",
-      ],
-    },
-  ];
-
   const toggleFolder = (label: string) => {
     setOpenFolders((prev) => {
       const next = new Set(prev);
@@ -171,7 +146,7 @@ function App() {
             Example Questions
           </p>
           <div className="flex flex-col gap-1">
-            {exampleGroups.map((group) => (
+            {samplePrompts.map((group) => (
               <div key={group.label}>
                 <button
                   onClick={() => toggleFolder(group.label)}
@@ -215,31 +190,48 @@ function App() {
           </button>
           <div className="flex-1 flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-white">PSC Inventory Assistant</h1>
+              <h1 className="text-2xl font-bold text-white">
+                PSC Inventory Assistant
+              </h1>
               <p className="text-gray-400 text-sm mt-0.5">
                 Ask questions about the PSC Inventory in natural language
               </p>
             </div>
-            {tokenUsage && (() => {
-              const pct = tokenUsage.promptTokenCount / tokenUsage.contextWindow;
-              const barColor = pct < 0.5 ? "bg-green-500" : pct < 0.8 ? "bg-yellow-500" : "bg-red-500";
-              const textColor = pct < 0.5 ? "text-green-400" : pct < 0.8 ? "text-yellow-400" : "text-red-400";
-              const used = tokenUsage.promptTokenCount.toLocaleString();
-              const total = (tokenUsage.contextWindow / 1000).toFixed(0) + "K";
-              return (
-                <div className="flex flex-col items-end gap-1 min-w-36">
-                  <span className={`text-xs font-mono ${textColor}`}>
-                    {used} / {total} tokens
-                  </span>
-                  <div className="w-full h-1.5 bg-gray-600 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-all duration-500 ${barColor}`}
-                      style={{ width: `${Math.min(pct * 100, 100).toFixed(1)}%` }}
-                    />
+            {tokenUsage &&
+              (() => {
+                const pct =
+                  tokenUsage.promptTokenCount / tokenUsage.contextWindow;
+                const barColor =
+                  pct < 0.5
+                    ? "bg-green-500"
+                    : pct < 0.8
+                      ? "bg-yellow-500"
+                      : "bg-red-500";
+                const textColor =
+                  pct < 0.5
+                    ? "text-green-400"
+                    : pct < 0.8
+                      ? "text-yellow-400"
+                      : "text-red-400";
+                const used = tokenUsage.promptTokenCount.toLocaleString();
+                const total =
+                  (tokenUsage.contextWindow / 1000).toFixed(0) + "K";
+                return (
+                  <div className="flex flex-col items-end gap-1 min-w-36">
+                    <span className={`text-xs font-mono ${textColor}`}>
+                      {used} / {total} tokens
+                    </span>
+                    <div className="w-full h-1.5 bg-gray-600 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${barColor}`}
+                        style={{
+                          width: `${Math.min(pct * 100, 100).toFixed(1)}%`,
+                        }}
+                      />
+                    </div>
                   </div>
-                </div>
-              );
-            })()}
+                );
+              })()}
           </div>
         </div>
       </header>
