@@ -194,6 +194,105 @@ customEvents
    - Most common user questions
    - Failed queries
 
+## Monitoring Usage
+
+### Which signal to trust
+
+Every call to the `query` function writes a trace line `User: <login> (<provider>)` through the Functions host logger. This is the most reliable usage signal, because it travels the same path as the host's own logs.
+
+Do **not** read usage from overall trace volume. The Functions host writes 20–30 configuration and lifecycle traces (`Job host started`, `LoggerFilterOptions ...`, `DrainMode mode enabled`, health checks) every time it starts or recycles, so trace counts spike on days with no chat traffic at all. Opening the web page does not call the API either; only sending a message does.
+
+Application Insights keeps data for 90 days by default.
+
+### Usage per day
+
+```kql
+traces
+| where timestamp > ago(90d)
+| where message startswith "User: "
+| parse message with "User: " login " (" provider ")"
+| summarize messages = count(), users = dcount(login), who = make_set(login)
+    by day = bin(timestamp, 1d)
+| order by day desc
+```
+
+### The questions users asked
+
+From the `DatabaseQuery` custom event:
+
+```kql
+customEvents
+| where timestamp > ago(90d) and name == "DatabaseQuery"
+| project timestamp,
+    user = tostring(customDimensions.userLogin),
+    question = tostring(customDimensions.userMessage),
+    sql = tostring(customDimensions.sqlQuery),
+    success = tostring(customDimensions.querySuccess),
+    error = tostring(customDimensions.queryError),
+    rows = toint(customMeasurements.rowCount),
+    ms = toint(customMeasurements.responseTimeMs)
+| order by timestamp asc
+```
+
+If no custom events arrive, the generated SQL and AI response are also logged as traces and can be grouped per invocation (the question itself is not in the traces):
+
+```kql
+let calls = traces
+| where timestamp > ago(90d) and message startswith "User: "
+| project operation_Id, start = timestamp, user = message;
+traces
+| where timestamp > ago(90d)
+| where message startswith "Extracted SQL Query:" or message startswith "AI Response:"
+| join kind=inner calls on operation_Id
+| project start, user, timestamp, message
+| order by start asc, timestamp asc
+```
+
+Expand a row in the results grid to see the full text; long values are truncated in the grid.
+
+### Weekly usage email (Logic App)
+
+Azure Monitor alert rules evaluate at most once every 24 hours, so a weekly digest uses a Consumption Logic App in the bot's resource group.
+
+1. **Create** a Logic App on the **Consumption** plan, workflow type **Stateful**, log analytics off.
+2. **Trigger: Recurrence** with interval `1`, frequency `Week`, and under advanced parameters a time zone (Pacific Standard Time), day (Monday) and hour (`8`).
+3. **Action: Azure Monitor Logs → Run query and visualize results**
+   - Resource type: *Application Insights*, pointing at the bot's resource
+   - Time range: **Last 7 days**
+   - Chart type: **Html Table**
+   - Query:
+     ```kql
+     traces
+     | where message startswith "User: "
+     | parse message with "User: " login " (" provider ")"
+     | summarize messages = count(), days = dcount(bin(timestamp, 1d)),
+         first = min(timestamp), last = max(timestamp) by login
+     | order by messages desc
+     ```
+4. **Action: Outlook.com / Office 365 Outlook → Send an email (V2)** with the previous step's **Body** output as the email body. Its **Attachment Content** and **Attachment Name** outputs can be attached as well.
+5. Save and use **Run Trigger** once to test it.
+
+As configured, the email arrives every week; an empty table means nobody used the bot. To mail only in weeks with activity, add a **Condition** before the email step that checks the query returned rows. To include the questions, add a second query step with the `DatabaseQuery` query above.
+
+### Daily alert (alternative)
+
+For a notification soon after someone uses the bot, create an alert rule on the Application Insights resource (**Alerts → Create → Alert rule → Custom log search**):
+
+```kql
+traces
+| where message startswith "User: "
+| parse message with "User: " login " (" provider ")"
+| project timestamp, login
+```
+
+- Measure **Table rows**, aggregation **Count**, split by dimension `login`
+- Operator **Greater than**, threshold `0`
+- Frequency and window: 15 minutes for near-real-time, or 24 hours for at most one email per day
+- Leave **Automatically resolve alerts** checked to get one notification per burst of activity
+- Action group: email and/or Azure mobile app push
+
+Filter out testers with `| where login !in ("...")` before the `project` line.
+
 ## Telemetry Data Collected
 
 For each query, we track:
