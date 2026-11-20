@@ -1,4 +1,4 @@
-# Database Chat App - Azure Static Web Apps
+# PH Database Chat Bot - Azure Static Web Apps
 
 A TypeScript-based starter template for allowing customers to interact with your SQL database through natural language using Google Gemini AI.
 
